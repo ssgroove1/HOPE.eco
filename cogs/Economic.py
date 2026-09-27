@@ -60,6 +60,28 @@ class EconomicCog(commands.Cog):
                 f"{type(e).__name__}: {e}"
             )
 
+    # METHOD: Проверка на отправку сообщения
+    async def command_checks(self, interaction: discord.Interaction) -> bool:
+        if interaction.channel.id != BotConfig.COMMAND_CHANNEL:
+            await self.send_message(interaction,
+                (
+                    f"{self.dn_em} ϶ᴛᴀ ᴋоʍᴀндᴀ ᴩᴀбоᴛᴀᴇᴛ ᴛоᴧьᴋо ʙ ᴋᴀнᴀᴧᴇ <#{BotConfig.COMMAND_CHANNEL}>!\n"
+                    f"\n-# {self.ow_em} ᴨожᴀᴧуйᴄᴛᴀ, ʙʙодиᴛᴇ ᴋоʍᴀнды ʙ оᴄобоʍ ᴋᴀнᴀᴧᴇ."
+                )
+            , True)
+            return False
+
+        if not BotConfig.TRANSACTIONS_AVAILABLE:
+            await self.send_message(interaction,
+                (
+                    f"{self.dn_em} ʙ дᴀнный ʍоʍᴇнᴛ ᴋоʍᴀндᴀ нᴇ доᴄᴛуᴨнᴀ.\n{self.dn_em} циᴩᴋуᴧяция ʙᴀᴧюᴛы ʙᴩᴇʍᴇнно оᴄᴛᴀноʙᴧᴇнᴀ."
+                    f"\n\n-# {self.ow_em} ᴨᴩиноᴄиʍ изʙинᴇния зᴀ нᴇудобᴄᴛʙᴀ, ᴨᴩобᴧᴇʍᴀ ᴩᴇɯᴀᴇᴛᴄя."
+                )
+            , True)
+            return False
+
+        return True
+
     # METHOD: Получение валюты
     async def get_work(self, interaction: discord.Interaction, user_id, reward, cooldown, cooldown_field):
         user_data = await self.manager.get_user_economic(user_id)
@@ -108,13 +130,7 @@ class EconomicCog(commands.Cog):
     @app_commands.command(name="культ", description="Поддержать культ (забрать ежедневный доход).")
     @app_commands.guild_only()
     async def claim(self, interaction: discord.Interaction):
-        if interaction.channel.id != BotConfig.COMMAND_CHANNEL:
-            await self.send_message(interaction,
-                (
-                    f"{self.dn_em} ϶ᴛᴀ ᴋоʍᴀндᴀ ᴩᴀбоᴛᴀᴇᴛ ᴛоᴧьᴋо ʙ ᴋᴀнᴀᴧᴇ <#{BotConfig.COMMAND_CHANNEL}>!\n"
-                    f"\n-# {self.ow_em} ᴨожᴀᴧуйᴄᴛᴀ, ʙʙодиᴛᴇ ᴋоʍᴀнды ʙ оᴄобоʍ ᴋᴀнᴀᴧᴇ."
-                )
-            , True)
+        if not await self.command_checks(interaction):
             return
 
         user_id = interaction.user.id
@@ -172,13 +188,7 @@ class EconomicCog(commands.Cog):
     @app_commands.command(name="бонус", description="Забрать дополнительную награду.")
     @app_commands.guild_only()
     async def bonus(self, interaction: discord.Interaction):
-        if interaction.channel.id != BotConfig.COMMAND_CHANNEL:
-            await self.send_message(interaction,
-                (
-                    f"{self.dn_em} ϶ᴛᴀ ᴋоʍᴀндᴀ ᴩᴀбоᴛᴀᴇᴛ ᴛоᴧьᴋо ʙ ᴋᴀнᴀᴧᴇ <#{BotConfig.COMMAND_CHANNEL}>!\n"
-                    f"\n-# {self.ow_em} ᴨожᴀᴧуйᴄᴛᴀ, ʙʙодиᴛᴇ ᴋоʍᴀнды ʙ оᴄобоʍ ᴋᴀнᴀᴧᴇ."
-                )
-            , True)
+        if not await self.command_checks(interaction):
             return
 
         user_id = interaction.user.id

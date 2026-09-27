@@ -58,7 +58,7 @@ class LeaderboardComponent(discord.ui.LayoutView):
 
 # COMPANENT: Компанент баланса пользователя
 class BalanceComponent(discord.ui.LayoutView):
-    def __init__(self, user, points, leaderboard):
+    def __init__(self, user, points, container_count, leaderboard):
         super().__init__(timeout=None)
 
         avatar_url = user.display_avatar.url
@@ -68,6 +68,7 @@ class BalanceComponent(discord.ui.LayoutView):
         ow_em = "<a:owner_emoji:1552781248236097546>"
         mm_em = "<a:member_emoji:1553129529378078842>"
         sl_em = "<a:sheild_emoji:1553396505665085500>"
+        ts_em = "<a:tombstone_emoji:1553765267979636766>"
 
         self.InfoContainer = discord.ui.Container(
             discord.ui.TextDisplay(
@@ -84,7 +85,8 @@ class BalanceComponent(discord.ui.LayoutView):
                 discord.ui.TextDisplay(
                     content=(
                         f"- **ᴛᴇᴋущий бᴀᴧᴀнᴄ ᴨоᴧьзоʙᴀᴛᴇᴧя**: {points} {vl_em}\n"
-                        f"- **ʍᴇᴄᴛо ʙ ᴛᴀбᴧицᴇ ᴧидᴇᴩоʙ**: {leaderboard} {mm_em}"
+                        f"- **ʍᴇᴄᴛо ʙ ᴛᴀбᴧицᴇ ᴧидᴇᴩоʙ**: {leaderboard} {mm_em}\n"
+                        f"- **оᴛᴋᴩыᴛых ᴋонᴛᴇйнᴇᴩоʙ**: {container_count} {ts_em}"
                     ),
                 ),
                     accessory=discord.ui.Thumbnail(
@@ -185,7 +187,7 @@ class InformationCog(commands.Cog):
             leaderboard_status = rank
 
         try:
-            view = BalanceComponent(member, user_data["points"], leaderboard_status)
+            view = BalanceComponent(member, user_data["points"], user_data["container_count"], leaderboard_status)
         except Exception as e:
             print(f"❌ BalanceComponent: {type(e).__name__}: {e}")
             raise

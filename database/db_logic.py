@@ -16,7 +16,8 @@ class DB_Manager:
                                 last_collect REAL DEFAULT 0,
                                 last_fish REAL DEFAULT 0,
                                 last_bonus REAL DEFAULT 0,
-                                last_rob REAL DEFAULT 0)''')
+                                last_rob REAL DEFAULT 0,
+                                container_count INTEGER DEFAULT 0)''')
             conn.commit()
 
     # The Economic
@@ -26,12 +27,12 @@ class DB_Manager:
             conn = sqlite3.connect(self.database, timeout=5)
             conn.execute("PRAGMA journal_mode=WAL")
             cursor = conn.cursor()
-            cursor.execute("SELECT points, last_claim, last_water, last_collect, last_fish, last_bonus, last_rob FROM user_balance WHERE user_id = ?", (user_id,))
+            cursor.execute("SELECT points, last_claim, last_water, last_collect, last_fish, last_bonus, last_rob, container_count FROM user_balance WHERE user_id = ?", (user_id,))
             row = cursor.fetchone()
             if row is None:
                 cursor.execute("INSERT INTO user_balance (user_id) VALUES (?)", (user_id,))
                 conn.commit()
-                row = (0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+                row = (0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
             conn.close()
             return {
                 "points": row[0], 
@@ -40,7 +41,8 @@ class DB_Manager:
                 "last_collect": row[3],
                 "last_fish": row[4],
                 "last_bonus": row[5],
-                "last_rob": row[6]
+                "last_rob": row[6],
+                "container_count": row[7]
             }
         except sqlite3.OperationalError as e:
             print(f"⚠️ Ошибка БД в get_user_economic: {e}")
@@ -62,6 +64,22 @@ class DB_Manager:
         """, (points, last_claim, last_water, last_collect, last_fish, last_bonus, last_rob, user_id))
         conn.commit()
         conn.close()
+
+    async def update_count_containers(self, user_id):
+        conn = sqlite3.connect(self.database, timeout=10)
+        try:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                UPDATE user_balance
+                SET container_count = container_count + 1
+                WHERE user_id = ?
+            """, (user_id,))
+
+            conn.commit()
+
+        finally:
+            conn.close()
 
     def get_leaderboard(self, limit=10):
         conn = sqlite3.connect(self.database, timeout=10)
@@ -122,6 +140,22 @@ class DB_Manager:
                 return None
 
             return rank + 1
+
+        finally:
+            conn.close()
+
+    def add_container_count_column(self):
+        conn = sqlite3.connect(self.database, timeout=10)
+
+        try:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                ALTER TABLE user_balance
+                ADD COLUMN container_count INTEGER DEFAULT 0
+            """)
+
+            conn.commit()
 
         finally:
             conn.close()
