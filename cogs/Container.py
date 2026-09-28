@@ -204,6 +204,8 @@ class SarcophagusComponent(discord.ui.LayoutView):
 
         # VARIABLE: Эмодзи для сообщений
         self.ts_em = "<a:tombstone_emoji:1553765267979636766>"
+        self.dn_em = "<a:denied_emoji:1552780290609512658>"
+        self.ow_em = "<a:owner_emoji:1552781248236097546>"
 
         self.InfoContainer = discord.ui.Container(
             discord.ui.TextDisplay(
@@ -285,6 +287,9 @@ class ContainerCog(commands.Cog):
 
     @tasks.loop(hours=6)
     async def container_loop(self):
+        if not BotConfig.TRANSACTIONS_AVAILABLE:
+            return
+
         channel = self.bot.get_channel(
             BotConfig.COMMAND_CHANNEL
         )
