@@ -55,6 +55,7 @@ class SychronizationCog(commands.Cog):
         self,
         interaction: discord.Interaction
     ):
+        # LOGIC: Некоторое проверки
         msg = None
         if interaction.user.id != BotConfig.DEVELOPER_ID:
             sub_title = f"-# {self.ow_em} иᴄᴨоᴧьзуᴇᴛᴄя ᴛоᴧьᴋо ᴄоздᴀᴛᴇᴧᴇʍ, ᴋоᴦдᴀ ᴋоʍᴀнды боᴛᴀ бᴀᴩахᴧяᴛ."
@@ -67,6 +68,7 @@ class SychronizationCog(commands.Cog):
             view = DefaultComponent(msg)
             return await self.send_message(interaction, view)
 
+        # LOGIC: Ансинхронизация команд
         try:
             await interaction.response.defer(
                 ephemeral=True
@@ -93,6 +95,7 @@ class SychronizationCog(commands.Cog):
 
             await self.send_message(interaction, view)
 
+        # LOGIC: Обработка ошибки
         except discord.HTTPException as e:
             print(
                 f"❌ [/unsync] Discord API: "
@@ -111,6 +114,7 @@ class SychronizationCog(commands.Cog):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     async def sync(self, interaction: discord.Interaction):
+        # LOGIC: Некоторое проверки
         msg = None
         if interaction.user.id != BotConfig.DEVELOPER_ID:
             sub_title = f"-# {self.ow_em} иᴄᴨоᴧьзуᴇᴛᴄя ᴛоᴧьᴋо ᴄоздᴀᴛᴇᴧᴇʍ, ᴋоᴦдᴀ ᴋоʍᴀнды боᴛᴀ бᴀᴩахᴧяᴛ."
@@ -123,6 +127,7 @@ class SychronizationCog(commands.Cog):
             view = DefaultComponent(msg)
             return await self.send_message(interaction, view)
 
+        # LOGIC: Синхронизация команд
         try:
             await interaction.response.defer(ephemeral=True)
 
@@ -143,6 +148,7 @@ class SychronizationCog(commands.Cog):
 
             await self.send_message(interaction, view)
 
+        # LOGIC: Обработка ошибки
         except discord.HTTPException as e:
             msg = f"{self.at_em} оɯибᴋᴀ Discord API: `{e}`"
             view = DefaultComponent(msg)

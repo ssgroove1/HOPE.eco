@@ -80,6 +80,19 @@ class EconomicCog(commands.Cog):
             , True)
             return False
 
+        bot_member = interaction.guild.me
+        if bot_member is None:
+            msg = (
+                f"{self.dn_em} нᴇ удᴀᴧоᴄь ᴨоᴧучить дᴀнныᴇ бoᴛᴀ нᴀ ᴄᴇᴩʙᴇᴩᴇ."
+                f"\n\n-# {self.ow_em} ᴄоздᴀᴛᴇᴧь боᴛᴀ оᴄʙᴇдоʍᴧᴇн об ϶ᴛоʍ."
+            )
+            await self.send_message(
+                interaction,
+                msg,
+                True
+            )
+            return False
+
         return True
 
     # METHOD: Получение валюты

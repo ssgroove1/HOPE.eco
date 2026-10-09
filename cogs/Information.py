@@ -19,6 +19,7 @@ class LeaderboardComponent(discord.ui.LayoutView):
         ow_em = "<a:owner_emoji:1552781248236097546>"
         gm_em = "<a:star_emoji:1553416240142360627>"
 
+        # LOGIC: Создание контейнера лидерборда
         self.InfoContainer = discord.ui.Container(
             discord.ui.TextDisplay(
                 content=(
@@ -70,6 +71,7 @@ class BalanceComponent(discord.ui.LayoutView):
         sl_em = "<a:sheild_emoji:1553396505665085500>"
         ts_em = "<a:tombstone_emoji:1553765267979636766>"
 
+        # LOGIC: Создание контейнера баланса пользователя
         self.InfoContainer = discord.ui.Container(
             discord.ui.TextDisplay(
                 content=(
@@ -117,6 +119,8 @@ class DefaultComponent(discord.ui.LayoutView):
         content,
     ):
         super().__init__()
+
+        # LOGIC: Создание контейнера для текстового сообщения
         self.InfoContainer = discord.ui.Container(
             discord.ui.TextDisplay(content=content),
         )
@@ -135,6 +139,15 @@ class InformationCog(commands.Cog):
         self.mm_em = "<a:member_emoji:1553129529378078842>"
         self.dn_em = "<a:denied_emoji:1552780290609512658>"
         self.gm_em = "<a:star_emoji:1553416240142360627>"
+
+        # LOGIC: Создание быстрого действия для получения баланса пользователя
+        self.balance_context = app_commands.ContextMenu(
+            name="ᴨоᴋᴀзᴀᴛь бᴀᴧᴀнᴄ ᴨоᴧьзоʙᴀᴛᴇᴧя",
+            callback=self.get_user_balance
+        )
+        self.bot.tree.add_command(
+            self.balance_context
+        )
 
     # METHOD: Отправка сообщения с View
     async def send_message(self, destination: discord.Interaction, content: str, is_ephemeral=False):
@@ -161,18 +174,50 @@ class InformationCog(commands.Cog):
                 f"{type(e).__name__}: {e}"
             )
 
-    @app_commands.command(name="баланс", description="Посмотреть баланс.")
-    @app_commands.describe(member="Валюта пользователя (не обяз. вводить).")
-    @app_commands.guild_only()
-    async def balance(self, interaction: discord.Interaction, member: discord.Member = None):
+    # METHOD: Проверка на отправку сообщения
+    async def command_checks(self, interaction: discord.Interaction) -> bool:
         if interaction.channel.id != BotConfig.COMMAND_CHANNEL:
+            msg = (
+                f"{self.dn_em} ϶ᴛᴀ ᴋоʍᴀндᴀ ᴩᴀбоᴛᴀᴇᴛ ᴛоᴧьᴋо ʙ ᴋᴀнᴀᴧᴇ <#{BotConfig.COMMAND_CHANNEL}>!\n"
+                f"\n-# {self.ow_em} ᴨожᴀᴧуйᴄᴛᴀ, ʙʙодиᴛᴇ ᴋоʍᴀнды ʙ оᴄобоʍ ᴋᴀнᴀᴧᴇ."
+            )
             await self.send_message(interaction,
-                (
-                    f"{self.dn_em} ϶ᴛᴀ ᴋоʍᴀндᴀ ᴩᴀбоᴛᴀᴇᴛ ᴛоᴧьᴋо ʙ ᴋᴀнᴀᴧᴇ <#{BotConfig.COMMAND_CHANNEL}>!\n"
-                    f"\n-# {self.ow_em} ᴨожᴀᴧуйᴄᴛᴀ, ʙʙодиᴛᴇ ᴋоʍᴀнды ʙ оᴄобоʍ ᴋᴀнᴀᴧᴇ."
-                )
+                msg
             , True)
+            return False
+
+        if not BotConfig.TRANSACTIONS_AVAILABLE:
+            msg = (
+                f"{self.dn_em} ʙ дᴀнный ʍоʍᴇнᴛ ᴋоʍᴀндᴀ нᴇ доᴄᴛуᴨнᴀ.\n{self.dn_em} циᴩᴋуᴧяция ʙᴀᴧюᴛы ʙᴩᴇʍᴇнно оᴄᴛᴀноʙᴧᴇнᴀ."
+                f"\n\n-# {self.ow_em} ᴨᴩиноᴄиʍ изʙинᴇния зᴀ нᴇудобᴄᴛʙᴀ, ᴨᴩобᴧᴇʍᴀ ᴩᴇɯᴀᴇᴛᴄя."
+            )
+            await self.send_message(interaction,
+                msg
+            , True)
+            return False
+
+        bot_member = interaction.guild.me
+        if bot_member is None:
+            msg = (
+                f"{self.dn_em} нᴇ удᴀᴧоᴄь ᴨоᴧучить дᴀнныᴇ бoᴛᴀ нᴀ ᴄᴇᴩʙᴇᴩᴇ."
+                f"\n\n-# {self.ow_em} ᴄоздᴀᴛᴇᴧь боᴛᴀ оᴄʙᴇдоʍᴧᴇн об ϶ᴛоʍ."
+            )
+            await self.send_message(
+                interaction,
+                msg,
+                True
+            )
+            return False
+
+        return True
+
+    # METHOD: Метод для показа пользовательского баланса
+    async def get_user_balance(self, interaction: discord.Interaction, member: discord.Member):
+        # LOGIC: Некоторая проверка
+        if not await self.command_checks(interaction):
             return
+                
+        # LOGIC: Получение пользователя
         if member is None:
             member = interaction.user
         user_data = await self.manager.get_user_economic(member.id)
@@ -180,40 +225,49 @@ class InformationCog(commands.Cog):
             print("Нет данных о пользователе")
             return
 
+        # LOGIC: Получение ранга в лидерборде
         rank = self.manager.get_user_rank(member.id)
         if rank is None:
             leaderboard_status = "оᴛᴄуᴛᴄᴛʙуᴇᴛ."
         else:
             leaderboard_status = rank
 
+        # LOGIC: Создаём контейнер для текстового сообщения
         try:
             view = BalanceComponent(member, user_data["points"], user_data["container_count"], leaderboard_status)
         except Exception as e:
             print(f"❌ BalanceComponent: {type(e).__name__}: {e}")
             raise
 
+        # LOGIC: Отправляем контейнер пользователя
         if interaction.response.is_done():
             await interaction.followup.send(view=view, ephemeral=False, allowed_mentions=discord.AllowedMentions.none())
         else:
             await interaction.response.send_message(view=view, ephemeral=False, allowed_mentions=discord.AllowedMentions.none())
 
+    # COMMAND: Команда баланса для показа счета пользователя
+    @app_commands.command(name="баланс", description="Посмотреть баланс.")
+    @app_commands.describe(member="Валюта пользователя (не обяз. вводить).")
+    @app_commands.guild_only()
+    async def balance(self, interaction: discord.Interaction, member: discord.Member = None):
+        # LOGIC: Вызываем метод получения баланса
+        await self.get_user_balance(interaction, member)
+
+    # COMMAND: Команда для показа лидерборда
     @app_commands.command(name="лидерборд", description="Показывает лидерборд игроков.")
     @app_commands.guild_only()
     async def top_players(self, interaction: discord.Interaction):
-        if interaction.channel.id != BotConfig.COMMAND_CHANNEL:
-            await self.send_message(interaction,
-                (
-                    f"{self.dn_em} ϶ᴛᴀ ᴋоʍᴀндᴀ ᴩᴀбоᴛᴀᴇᴛ ᴛоᴧьᴋо ʙ ᴋᴀнᴀᴧᴇ <#{BotConfig.COMMAND_CHANNEL}>!\n"
-                    f"\n-# {self.ow_em} ᴨожᴀᴧуйᴄᴛᴀ, ʙʙодиᴛᴇ ᴋоʍᴀнды ʙ оᴄобоʍ ᴋᴀнᴀᴧᴇ."
-                )
-            , True)
+        # LOGIC: Некоторая проверка
+        if not await self.command_checks(interaction):
             return
 
+        # LOGIC: Получаем данные о лидерборде
         rows = self.manager.get_leaderboard()
         if not rows:
             await self.send_message(interaction, f"{self.gm_em} ᴨоᴋᴀ нᴇᴛ иᴦᴩоᴋоʙ ᴄ очᴋᴀʍи!\n\n-# {self.ow_em} ᴄчиᴛᴀᴇᴛᴇ ϶ᴛо оɯибᴋой, ᴄообщиᴛᴇ ᴄоздᴀᴛᴇᴧю.", True)
             return
 
+        # LOGIC: Формируем лидерборд текст
         leaderboard_text = ""
         for i, row in enumerate(rows, 1):
 
@@ -243,20 +297,18 @@ class InformationCog(commands.Cog):
                 f"`{points}` {self.vl_em}\n"
             )
 
+        # LOGIC: Создаём контейнер лидерборда
         try:
             view = LeaderboardComponent(interaction.guild, leaderboard_text)
         except Exception as e:
             print(f"❌ BalanceComponent: {type(e).__name__}: {e}")
             raise
-        
+
+        # LOGIC: Отправляем лидерборд пользователю
         if interaction.response.is_done():
             await interaction.followup.send(view=view, ephemeral=False, allowed_mentions=discord.AllowedMentions.none())
         else:
             await interaction.response.send_message(view=view, ephemeral=False, allowed_mentions=discord.AllowedMentions.none())
-
-    # Быстрые действия
-
-    # Магазин
 
 # LOGIC: Запуск кога
 async def setup(bot):
