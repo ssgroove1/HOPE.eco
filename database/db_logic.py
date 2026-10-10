@@ -62,9 +62,7 @@ class DB_Manager:
         conn = None
         try:
             # LOGIC: Гарантируем наличие пользователя в БД
-            created = await self.ensure_user(user_id)
-            if not created:
-                return None
+            await self.ensure_user(user_id)
             
             conn = sqlite3.connect(
                 self.database,
@@ -120,22 +118,76 @@ class DB_Manager:
             if conn is not None:
                 conn.close()
 
-    # ! Будет убрано в будущем, так как не используется
-    async def update_user_economic(self, user_id, points, last_claim, last_water, last_collect, last_fish, last_bonus, last_rob):
-        conn = sqlite3.connect(self.database, timeout=10)
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE user_balance 
-            SET points = ?, last_claim = ?, last_water = ?, last_collect = ?, last_fish = ?, last_bonus = ?, last_rob = ?
-            WHERE user_id = ?
-        """, (points, last_claim, last_water, last_collect, last_fish, last_bonus, last_rob, user_id))
-        conn.commit()
-        conn.close()
+    # LOGIC: Обновление таймера
+    async def update_user_timer(
+        self,
+        user_id: int,
+        timer_name: str,
+        timestamp: float
+    ):
+        allowed_timers = {
+            "last_claim",
+            "last_water",
+            "last_collect",
+            "last_fish",
+            "last_bonus",
+            "last_rob"
+        }
+
+        if timer_name not in allowed_timers:
+            raise ValueError(
+                f"Недопустимое название таймера: {timer_name}"
+            )
+
+        conn = None
+
+        try:
+            # LOGIC: Гарантируем наличие пользователя в БД
+            await self.ensure_user(user_id)
+            
+            conn = sqlite3.connect(
+                self.database,
+                timeout=10
+            )
+
+            cursor = conn.cursor()
+
+            cursor.execute(
+                f"""
+                UPDATE user_balance
+                SET {timer_name} = ?
+                WHERE user_id = ?
+                """,
+                (timestamp, user_id)
+            )
+
+            if cursor.rowcount == 0:
+                return
+
+            conn.commit()
+            return 
+
+        except sqlite3.Error as error:
+            if conn is not None:
+                conn.rollback()
+
+            print(
+                f"❌ Ошибка БД в update_user_timer: "
+                f"{type(error).__name__}: {error}"
+            )
+            return
+
+        finally:
+            if conn is not None:
+                conn.close()
 
     # LOGIC: Добавление валюты пользователю
     async def add_points(self, user_id: int, points: int):
         conn = sqlite3.connect(self.database, timeout=10)
         try:
+            # LOGIC: Гарантируем наличие пользователя в БД
+            await self.ensure_user(user_id)
+            
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE user_balance
@@ -145,6 +197,31 @@ class DB_Manager:
             conn.commit()
         finally:
             conn.close()
+
+    # LOGIC: Просмотр кол-во валюты пользователя
+    async def get_user_points(self, user_id: int) -> int:
+        conn = None
+        try:
+            # LOGIC: Гарантируем наличие пользователя в БД
+            await self.ensure_user(user_id)
+
+            conn = sqlite3.connect(self.database, timeout=10)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT points
+                FROM user_balance
+                WHERE user_id = ?
+            """, (user_id,))
+            row = cursor.fetchone()
+            return row["points"] if row else 0
+        except sqlite3.Error as error:
+            print(f"❌ Ошибка БД в get_user_points: "
+                f"{type(error).__name__}: {error}")
+            return 0
+        finally:
+            if conn is not None:
+                conn.close()
 
     # LOGIC: Данные для контейнеров
     async def update_count_containers(self, user_id):

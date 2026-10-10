@@ -177,30 +177,20 @@ class AdminCog(commands.Cog):
             action4 = "ʙыдᴀᴧ"
         
         channel = self.bot.get_channel(BotConfig.LOG_CHANNEL)
+        
+        new_points = -int(points) if action == "take" else int(points)
 
-        user_data = await self.manager.get_user_economic(user.id)
-
-        new_points = None
-        if action == "take":
-            new_points = max(0, int(user_data["points"]) - points)
-        else:
-            new_points = int(user_data["points"] + points)
-
-        await self.manager.update_user_economic(
+        await self.manager.add_points(
             user.id,
-            new_points,
-            user_data["last_claim"],
-            user_data["last_water"],
-            user_data["last_collect"],
-            user_data["last_fish"],
-            user_data["last_bonus"],
-            user_data["last_rob"]
+            new_points
         )
+
+        current_points = await self.manager.get_user_points(user.id)
 
         # LOGIC: Отправка в чат
         msg = (
             f"{self.mm_em} ᴨоᴧьзоʙᴀᴛᴇᴧю {user.mention} {action1} {points} {self.vl_em}.\n"
-            f"{self.mm_em} ноʙый бᴀᴧᴀнᴄ ᴨоᴧьзоʙᴀᴛᴇᴧя: {new_points} {self.vl_em}."
+            f"{self.mm_em} ноʙый бᴀᴧᴀнᴄ ᴨоᴧьзоʙᴀᴛᴇᴧя: {current_points} {self.vl_em}."
             f"\n\n-# {self.ow_em} ʙ ᴄᴧучᴀᴇ зᴧоуᴨоᴛᴩᴇбᴧᴇния — нᴀᴋᴀзᴀниᴇ."
             )
         await self.send_message(interaction, msg, True)
@@ -211,7 +201,7 @@ class AdminCog(commands.Cog):
             f"{self.gr_em} ᴨоᴧьзоʙᴀᴛᴇᴧь {interaction.user.mention} {action4} иᴦᴩоᴋу {user.mention} ʙᴀᴧюᴛу\n"
             f"{self.gr_em} ᴩᴀзʍᴇᴩ {action3} ʙᴀᴧюᴛы: {points} {self.vl_em}\n\n"
             f"{self.at_em} ᴨᴩичинᴀ: {reason}\n"
-            f"{self.at_em} ноʙый бᴀᴧᴀнᴄ ᴨоᴧьзоʙᴀᴛᴇᴧя: {new_points} {self.vl_em}"
+            f"{self.at_em} ноʙый бᴀᴧᴀнᴄ ᴨоᴧьзоʙᴀᴛᴇᴧя: {current_points} {self.vl_em}"
             f"\n\n-# {self.ow_em} ʙ ᴄᴧучᴀᴇ зᴧоуᴨоᴛᴩᴇбᴧᴇния — ʙы ʙ ᴨᴩᴀʙᴇ нᴀᴋᴀзᴀᴛь ᴇᴦо."
             )
         await self.send_message(channel, l_msg)

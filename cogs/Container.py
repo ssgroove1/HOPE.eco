@@ -26,22 +26,22 @@ class SarcophagusSelect(discord.ui.Select):
         self.options_data = {
             "crowbar": {
                 "chance": 90,
-                "reward_min": 10,
-                "reward_max": 25,
+                "reward_min": 15,
+                "reward_max": 35,
                 "success_text": "ᴄ ᴧᴇᴦᴋоᴄᴛью ʙᴄᴋᴩыᴧ ᴧоʍоʍ",
                 "fail_text": "нᴇ ʙозʍожно ʙᴄᴋᴩыᴛь ᴧоʍоʍ"
             },
             "grinder": {
                 "chance": 45,
-                "reward_min": 30,
-                "reward_max": 45,
+                "reward_min": 45,
+                "reward_max": 65,
                 "success_text": "ᴀᴋᴋуᴩᴀᴛно ʙᴄᴋᴩыᴧ боᴧᴦᴀᴩᴋой",
                 "fail_text": "оᴋᴀзᴀᴧᴄя ᴄᴧиɯᴋоʍ ᴛʙᴇᴩд дᴧя боᴧᴦᴀᴩᴋи"
             },
             "explosive": {
                 "chance": 15,
-                "reward_min": 55,
-                "reward_max": 85,
+                "reward_min": 75,
+                "reward_max": 95,
                 "success_text": "удᴀчно ʙзоᴩʙᴀᴧ ᴛᴩᴀᴛиᴧоʍ",
                 "fail_text": "быᴧ ʙзоᴩʙᴀн ᴄ ʙнуᴛᴩᴇнниʍ ᴄодᴇᴩжиʍыʍ"
             },
@@ -101,22 +101,7 @@ class SarcophagusSelect(discord.ui.Select):
                 data["reward_max"],
             )
 
-            user_data = await self.cog.manager.get_user_economic(
-                user.id
-            )
-
-            new_points = user_data["points"] + reward
-
-            await self.cog.manager.update_user_economic(
-                user.id,
-                new_points,
-                user_data["last_claim"],
-                user_data["last_water"],
-                user_data["last_collect"],
-                user_data["last_fish"],
-                user_data["last_bonus"],
-                user_data["last_rob"],
-            )
+            await self.cog.manager.add_points(user.id, reward)
 
             success_text = data["success_text"]
 
@@ -285,7 +270,7 @@ class ContainerCog(commands.Cog):
     def cog_unload(self):
         self.container_loop.cancel()
 
-    @tasks.loop(hours=6)
+    @tasks.loop(hours=4)
     async def container_loop(self):
         if not BotConfig.TRANSACTIONS_AVAILABLE:
             return

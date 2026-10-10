@@ -36,6 +36,62 @@ class EconomicCog(commands.Cog):
         self.wt_em = "<a:wait_emoji:1552785236549443634>"
         self.ow_em = "<a:owner_emoji:1552781248236097546>"
         self.cl_em = "<a:cult_emoji:1553433613012566066>"
+        self.st_em = "<:shiny_emoji:1558391640295604345>"
+
+        # LOGIC: Переменная для хранение данных рыб
+        self.fish_info = {
+            "common": {
+                "ᴩубᴇц": {
+                    "emoji": "<:common_fish:1558444884044681246>",
+                    "rarity": "ɸизичᴇᴄᴋᴀя",
+                    "chance": 65,
+                    "price_from": 14,
+                    "price_until": 23
+                },
+                "ᴄᴋᴀᴀз": {
+                    "emoji": "<:uncommon_fish:1558444836468822036>",
+                    "rarity": "духоʙнᴀя",
+                    "chance": 35,
+                    "price_from": 17,
+                    "price_until": 28
+                }
+            },
+            "epic": {
+                "ᴄоʍ-инᴄᴨᴇᴋᴛоᴩ": {
+                    "emoji": "<:rare_fish:1558444835013140510>",
+                    "rarity": "ᴦᴀᴧᴧюцинᴀᴦᴇннᴀя",
+                    "chance": 60,
+                    "price_from": 37,
+                    "price_until": 58
+                },
+                "ᴧᴀᴛиʍᴇᴩия": {
+                    "emoji": "<:epic_fish:1558444833452855327>",
+                    "rarity": "иᴄᴛоᴩичᴇᴄᴋᴀя",
+                    "chance": 30,
+                    "price_from": 46,
+                    "price_until": 78
+                },
+                "ʙᴇᴩиᴧиᴛи": {
+                    "emoji": "<:hellfish:1558444862380965958>",
+                    "rarity": "ʍᴇᴛᴀʍоᴩɸичᴇᴄᴋᴀя",
+                    "chance": 10,
+                    "price_from": 67,
+                    "price_until": 94
+                }
+            }
+        }
+
+    # METHOD: Получение данных о рыбе
+    def get_fish_data(self, rarity):
+        fishes = self.fish_info[rarity]
+
+        fish_name = random.choices(
+            list(fishes.keys()),
+            weights=[fish["chance"] for fish in fishes.values()],
+            k=1
+        )[0]
+
+        return fish_name
 
     # METHOD: Отправка сообщения с View
     async def send_message(self, destination: discord.Interaction, content: str, is_ephemeral=False):
@@ -95,13 +151,10 @@ class EconomicCog(commands.Cog):
 
         return True
 
-    # METHOD: Получение валюты
-    async def get_work(self, interaction: discord.Interaction, user_id, reward, cooldown, cooldown_field):
-        user_data = await self.manager.get_user_economic(user_id)
+    # METHOD: Проверка кулдауна
+    async def cooldown_check(self, interaction: discord.Interaction, last_time, cooldown) -> bool:
         current_time = time.time()
 
-        # Получаем время последнего использования нужной команды
-        last_time = user_data[cooldown_field]
         time_passed = current_time - last_time
 
         if time_passed < cooldown:
@@ -118,27 +171,60 @@ class EconomicCog(commands.Cog):
                 ),
                 True
             )
-            return
-        
-        new_points = user_data["points"] + reward
-        user_data[cooldown_field] = current_time
+            return False
 
-        await self.manager.update_user_economic(
-            user_id,
-            new_points,
-            user_data["last_claim"],
-            user_data["last_water"],
-            user_data["last_collect"],
-            user_data["last_fish"],
-            user_data["last_bonus"],
-            user_data["last_rob"]
-        )
-        
+        return True
+
+    # METHOD: Метод рыбалки
+    async def fishing(self):
+        player_chance = random.random()
+        is_epic = player_chance >= 0.8
+
+        rarity_type = "epic" if is_epic else "common"
+
+        fish_name = self.get_fish_data(rarity_type)
+        fish_data = self.fish_info[rarity_type][fish_name]
+
+        fish_price_from = fish_data["price_from"]
+        fish_price_until = fish_data["price_until"]
+
+        reward = random.randint(fish_price_from, fish_price_until)
+
+        return reward, rarity_type, fish_name
+
+    # METHOD: Получить прибыть
+    async def get_work(self, interaction: discord.Interaction, cooldown_field, reward, fish_com = False, rarity_type = None, fish_name = None):
+        current_time = time.time()
+        user_id = interaction.user.id
+
+        await self.manager.add_points(user_id, reward)
+
+        await self.manager.update_user_timer(user_id, cooldown_field, current_time)
+
+        current_points = await self.manager.get_user_points(user_id)
+
+        if fish_com:
+            fish_data = self.fish_info[rarity_type][fish_name]
+            
+            fish_emoji = fish_data["emoji"]
+            fish_rarity = fish_data["rarity"]
+    
+            user_id = interaction.user.id
+    
+            await self.send_message(interaction,
+                f"{self.gr_em} {interaction.user.mention}, ʙы ʙыᴧоʙиᴧи ᴩыбу **{fish_name}** {fish_emoji}!\n"
+                f"- ``ᴩᴇдᴋоᴄᴛь ᴩыбы``: **{fish_rarity}** {self.st_em}\n"
+                f"- ``нᴀᴦᴩᴀдᴀ зᴀ ᴨоиʍᴋу``: **{reward}** {self.vl_em}\n"
+                f"{self.gr_em} ʙᴀɯ ᴛᴇᴋущий бᴀᴧᴀнᴄ: {current_points} {self.vl_em}."
+                f"\n\n-# {self.cl_em} ᴋуᴧьᴛ ᴦоᴩдиᴛᴄя ʙᴀʍи, нᴇ оᴄᴛᴀʙᴧяйᴛᴇ ᴇᴦо, ᴀ он — ʙᴀᴄ."
+            )
+            return
+
         await self.send_message(interaction,
             f"{self.gr_em} {interaction.user.mention}, ʙы ᴨоᴧучиᴧи {reward} {self.vl_em}!\n"
-            f"{self.gr_em} ʙᴀɯ ᴛᴇᴋущий бᴀᴧᴀнᴄ: {new_points} {self.vl_em}."
+            f"{self.gr_em} ʙᴀɯ ᴛᴇᴋущий бᴀᴧᴀнᴄ: {current_points} {self.vl_em}."
             f"\n\n-# {self.cl_em} ᴋуᴧьᴛ ᴦоᴩдиᴛᴄя ʙᴀʍи, нᴇ оᴄᴛᴀʙᴧяйᴛᴇ ᴇᴦо, ᴀ он — ʙᴀᴄ."
-            )
+        )
 
     @app_commands.command(name="культ", description="Поддержать культ (забрать ежедневный доход).")
     @app_commands.guild_only()
@@ -146,57 +232,31 @@ class EconomicCog(commands.Cog):
         if not await self.command_checks(interaction):
             return
 
-        user_id = interaction.user.id
-        reward = random.randint(7, 19)
+        user_data = await self.manager.get_user_economic(interaction.user.id)
+        user_cooldown = user_data["last_claim"]
         cooldown = 14400
+        if not await self.cooldown_check(interaction, user_cooldown, cooldown):
+            return
 
-        await self.get_work(interaction, user_id, reward, cooldown, "last_claim")
+        reward = int(random.randint(13, 28))
 
-    # @app_commands.command(name="рыбалка", description="Порыбачить для прибыли.")
-    # @app_commands.guild_only()
-    # async def fish(self, interaction: discord.Interaction):
-    #     if interaction.channel.id != BotConfig.COMMAND_CHANNEL:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Эта команда работает только в канале <#{BotConfig.COMMAND_CHANNEL}>!", ephemeral=True)
-    #         return
-    #     await interaction.response.defer()
-    #     user_id = interaction.user.id
-    #     user_data = await self.manager.get_user_economic(user_id)
-    #     current_time = time.time()
-    #     time_passed = current_time - user_data["last_fish"]
+        await self.get_work(interaction, "last_claim", reward)
 
-    #     if time_passed < 28800:
-    #         seconds_left = int(28800 - time_passed)
-    #         hours = seconds_left // 3600
-    #         minutes = (seconds_left % 3600) // 60
-    #         await safe_send(interaction, f"**<:accessdeniedemoji:1517986918573408318> {interaction.user.mention}, вы уже забирали награду!**\n⌛ Осталось: **{hours} ч. {minutes} мин.**", ephemeral=True)
-    #         return
-    #     chance = random.random()
-    #     fish_text = ""
-    #     if chance < 0.01:
-    #         fish_text = "ⲏⲁⲥⲧⲟяպⲉⲅⲟ ⲙⲉⲅⲁⲗⲁⲇⲟⲏⲁ! <:megaladonemoji:1518011720499593246>"
-    #         reward = random.randint(124, 157)
-    #         role = interaction.guild.get_role(1518011868709388339)
-    #         if role:
-    #             await interaction.user.add_roles(role, reason=f"Выловил улов!")
-    #             await safe_send(interaction, "<:trophyemoji:1517928090708345032> Вам выдана роль за улов!", ephemeral=True)
-    #     elif chance < 0.1:
-    #         fish_text = "ⲿυⲃⲩю ⲁⲕⲩⲗⲩ! <:sharkemoji:1518009750078492944>"
-    #         reward = random.randint(27, 36)
-    #         role = interaction.guild.get_role(1518010342410686606)
-    #         if role:
-    #             await interaction.user.add_roles(role, reason=f"Выловил улов!")
-    #             await safe_send(interaction,"<:trophyemoji:1517928090708345032> Вам выдана роль за улов!", ephemeral=True)
-    #     elif chance < 0.3:
-    #         fish_text = "պⲩⲕⲩ! <:fish2emoji:1518009317129715843>"
-    #         reward = random.randint(11, 19)
-    #     else:  
-    #         fish_text = "ⲟⲕⲩⲏя. <:fish1emoji:1518008900941774870>"
-    #         reward = random.randint(4, 8)
+    @app_commands.command(name="рыбалка", description="Порыбачить ради прибыли.")
+    @app_commands.guild_only()
+    async def fish(self, interaction: discord.Interaction):
+        if not await self.command_checks(interaction):
+            return
 
-    #     new_points = user_data["points"] + reward
+        user_data = await self.manager.get_user_economic(interaction.user.id)
+        user_cooldown = user_data["last_fish"]
+        cooldown = 28800
+        if not await self.cooldown_check(interaction, user_cooldown, cooldown):
+            return
 
-    #     await self.manager.update_user_economic(user_id, new_points, user_data["trees"], user_data["bugs"], user_data["animals"], user_data["werewolfs"], current_time, user_data["last_water"], user_data["last_collect"], current_time, user_data["last_bonus"], user_data["last_rob"])
-    #     await safe_send(interaction, f"{interaction.user.mention}, ʙы ʙыᴧоʙиᴧи **{fish_text}** ʙᴀɯᴀ нᴀᴦᴩᴀдᴀ: **{reward} <:physpoints:1515371982571704361>**!\nʙᴀɯ ᴛᴇᴋущий бᴀᴧᴀнᴄ: **{new_points} <:physpoints:1515371982571704361>**.")
+        reward, rarity_type, fish_name = await self.fishing()
+
+        await self.get_work(interaction, "last_fish", reward, True, rarity_type, fish_name)
 
     @app_commands.command(name="бонус", description="Забрать дополнительную награду.")
     @app_commands.guild_only()
@@ -204,11 +264,15 @@ class EconomicCog(commands.Cog):
         if not await self.command_checks(interaction):
             return
 
-        user_id = interaction.user.id
-        reward = random.randint(3, 11)
+        user_data = await self.manager.get_user_economic(interaction.user.id)
+        user_cooldown = user_data["last_bonus"]
         cooldown = 28800
+        if not await self.cooldown_check(interaction, user_cooldown, cooldown):
+            return
 
-        await self.get_work(interaction, user_id, reward, cooldown, "last_bonus")
+        reward = int(random.randint(20, 39))
+
+        await self.get_work(interaction, "last_bonus", reward)
 
     # @app_commands.command(name="казино", description="Дэпнуть...")
     # @app_commands.describe(bet="Сумма ставки.")
