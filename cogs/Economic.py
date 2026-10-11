@@ -178,7 +178,7 @@ class EconomicCog(commands.Cog):
     # METHOD: Метод рыбалки
     async def fishing(self):
         player_chance = random.random()
-        is_epic = player_chance >= 0.8
+        is_epic = player_chance >= 0.85
 
         rarity_type = "epic" if is_epic else "common"
 
@@ -250,7 +250,7 @@ class EconomicCog(commands.Cog):
 
         user_data = await self.manager.get_user_economic(interaction.user.id)
         user_cooldown = user_data["last_fish"]
-        cooldown = 28800
+        cooldown = 18000
         if not await self.cooldown_check(interaction, user_cooldown, cooldown):
             return
 
