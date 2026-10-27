@@ -393,8 +393,8 @@ class CasinoCog(commands.Cog):
             result_text = (
                 f"## ʟᴏsᴇʀ ʙᴇᴛ {self.sm_em}\n"
                 f"{user.mention}, — {' | '.join(reels)}\n\n"
-                f"{self.gr_em} ᴩᴀзʍᴇᴩ ᴨᴩоиᴦᴩᴀнной ᴄᴛᴀʙᴋи: {bet} {self.vl_em}\n"
-                f"{self.gr_em} ᴛᴇᴋущий бᴀᴧᴀнᴄ: {balance} {self.vl_em}"
+                f"{self.dn_em} ᴩᴀзʍᴇᴩ ᴨᴩоиᴦᴩᴀнной ᴄᴛᴀʙᴋи: {bet} {self.vl_em}\n"
+                f"{self.dn_em} ᴛᴇᴋущий бᴀᴧᴀнᴄ: {balance} {self.vl_em}"
                 f"\n\n-# {self.cl_em} ᴋуᴧьᴛ нᴀдᴇяᴛьᴄя нᴀ ʙᴀᴄ, нᴇ оᴄᴛᴀʙᴧяйᴛᴇ ᴇᴦо, ᴀ он — ʙᴀᴄ."
             )
         return {
