@@ -3,7 +3,6 @@ from discord import app_commands
 from pathlib import Path
 from discord.ext import commands, tasks
 
-# Импорт ваших собственных настроек и функций из корня проекта
 from config import BotConfig
 from database.db_logic import DB_Manager
 
@@ -134,7 +133,6 @@ class RoleShopSelect(discord.ui.Select):
                 )
     
             except discord.HTTPException as error:
-                # Любая другая ошибка Discord API.
                 await self.cog.manager.add_points(
                     interaction.user.id,
                     points_spent
@@ -313,7 +311,7 @@ class ConfirmComponent(discord.ui.LayoutView):
         await interaction.response.edit_message(view=self)
         self.stop()
 
-    # METHOD: Обработка таймаута
+    # METHOD: Обработка таймаута (60 секунд)
     async def on_timeout(self):
         await self.disable_buttons()
 
@@ -421,7 +419,7 @@ class RoleShopComponent(discord.ui.LayoutView):
 
         self.add_item(self.InfoContainer)
 
-    # METHOD: Обработка таймаута
+    # METHOD: Обработка таймаута (5 минут)
     async def on_timeout(self):
         for item in self.walk_children():
             if isinstance(item, discord.ui.Select):

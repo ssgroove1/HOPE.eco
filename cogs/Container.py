@@ -3,7 +3,6 @@ from discord import app_commands
 from pathlib import Path
 from discord.ext import commands, tasks
 
-# Импорт ваших собственных настроек и функций из корня проекта
 from config import BotConfig
 from database.db_logic import DB_Manager
 
@@ -23,6 +22,7 @@ class SarcophagusSelect(discord.ui.Select):
         self.at_em = "<a:attention_emoji:1552749665030508654>"
         self.p_vl_em = discord.PartialEmoji(name="value_emoji", id=1553133311365349457)
 
+        # VARIABLE: Опции контейнера
         self.options_data = {
             "crowbar": {
                 "chance": 90,
@@ -86,14 +86,14 @@ class SarcophagusSelect(discord.ui.Select):
             ],
         )
 
+    # METHOD: Выбор опции пользователем и дальнейшие действия бота
     async def callback(self, interaction: discord.Interaction):
-
         selected = self.values[0]
         data = self.options_data[selected]
 
         user = interaction.user
 
-        # Проверяем шанс
+        # LOGIC: Проверяем шанс
         success = random.randint(1, 100) <= data["chance"]
         if success:
             reward = random.randint(
@@ -239,8 +239,9 @@ class SarcophagusComponent(discord.ui.LayoutView):
 
         self.add_item(self.InfoContainer)
 
+    # METHOD: Выключение/деактивация кнопок за время (30 минут)
     async def on_timeout(self):
-        # Отключаем Select
+        # LOGIC: Отключаем все опции
         for item in self.walk_children():
             if isinstance(item, discord.ui.Select):
                 item.disabled = True
@@ -260,16 +261,20 @@ class SarcophagusComponent(discord.ui.LayoutView):
                     f"{type(error).__name__}: {error}"
                 )
 
+# LOGIC: Основной ког контейнера
 class ContainerCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.manager = DB_Manager(BotConfig.DB_PATH)
 
+        # LOGIC: Запуск цикла для отправки контейнеров
         self.container_loop.start()
 
+    # METHOD: Выключение/деактивация цикла после закрытия кога
     def cog_unload(self):
         self.container_loop.cancel()
 
+    # LOGIC: Цикл отправки контейнера
     @tasks.loop(hours=4)
     async def container_loop(self):
         if not BotConfig.TRANSACTIONS_AVAILABLE:
@@ -304,9 +309,11 @@ class ContainerCog(commands.Cog):
                 f"{type(e).__name__}: {e}"
             )
 
+    # LOGIC: Цикл запускает после готовности бота
     @container_loop.before_loop
     async def before_container_loop(self):
         await self.bot.wait_until_ready()
 
+# LOGIC: Запуск кога
 async def setup(bot: commands.Bot):
     await bot.add_cog(ContainerCog(bot))

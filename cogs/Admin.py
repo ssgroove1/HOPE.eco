@@ -3,11 +3,9 @@ from discord import app_commands
 from pathlib import Path
 from discord.ext import commands
 
-# Импорт ваших собственных настроек и функций из корня проекта
 from config import BotConfig
 from database.db_logic import DB_Manager
 
-# Корень проекта (поднимаемся из папки cogs/ на один уровень вверх)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # COMPANENT: Компанент подверждения действия
@@ -47,7 +45,7 @@ class ConfirmComponent(discord.ui.LayoutView):
             custom_id="btn_action_2",
         )
 
-        # Callback кнопок
+        # LOGIC: Callback кнопок
         self.confirm_button.callback = self.confirm
         self.cancel_button.callback = self.cancel
 
@@ -71,10 +69,12 @@ class ConfirmComponent(discord.ui.LayoutView):
             ),
         )
 
+    # METHOD: Выключение/деактивация кнопок
     async def disable_buttons(self):
         self.confirm_button.disabled = True
         self.cancel_button.disabled = True
 
+    # METHOD: Кнопка подверждения действия
     async def confirm(self, interaction: discord.Interaction):
         await self.disable_buttons()
 
@@ -84,6 +84,7 @@ class ConfirmComponent(discord.ui.LayoutView):
 
         self.stop()
 
+    # METHOD: Кнопка отмены действия
     async def cancel(self, interaction: discord.Interaction):
         await self.disable_buttons()
 
@@ -91,6 +92,7 @@ class ConfirmComponent(discord.ui.LayoutView):
 
         self.stop()
 
+    # METHOD: Выключение/деактивация кнопок за время (60 секунд)
     async def on_timeout(self):
         await self.disable_buttons()
 
@@ -206,11 +208,13 @@ class AdminCog(commands.Cog):
             )
         await self.send_message(channel, l_msg)
 
+    # COMMAND: Команда добавления пользователю валюты
     @app_commands.command(name="добавить_валюту", description="Добавить валюту пользователю.")
     @app_commands.describe(user="Пользователь.", points="Кол-во валюты.", reason="Укажите причину.")
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     async def give(self, interaction: discord.Interaction, user: discord.User, points: int, reason: str):
+        # METHOD: Подверждение действия и дальнейшее его продвижение
         async def confirm_action(confirm_interaction: discord.Interaction):
             await self.action_currency(
                 confirm_interaction,
@@ -220,6 +224,7 @@ class AdminCog(commands.Cog):
                 "give"
             )
 
+        # LOGIC: Отправка сообщения с подверждением/отменой
         view = ConfirmComponent(
             on_confirm=confirm_action
         )
@@ -231,11 +236,13 @@ class AdminCog(commands.Cog):
 
         view.message = await interaction.original_response()
 
+    # COMMAND: Забрать валюту пользователя
     @app_commands.command(name="заморозить_валюту", description="Заморозить валюту у пользователя.")
     @app_commands.describe(user="Пользователь.", points="Кол-во валюты.", reason="Укажите причину.")
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     async def take(self, interaction: discord.Interaction, user: discord.User, points: int, reason: str):
+        # METHOD: Подверждение действия и дальнейшее его продвижение
         async def confirm_action(confirm_interaction: discord.Interaction):
             await self.action_currency(
                 confirm_interaction,
@@ -245,6 +252,7 @@ class AdminCog(commands.Cog):
                 "take"
             )
 
+        # LOGIC: Отправка сообщения с подверждением/отменой
         view = ConfirmComponent(
             on_confirm=confirm_action
         )
@@ -256,6 +264,7 @@ class AdminCog(commands.Cog):
 
         view.message = await interaction.original_response()
 
+    # COMMAND: Команда быстрого действия (Пока не актуально)
     # @app_commands.command(name="админ_панель", description="Быстрые действия с экономикой игрока.")
     # @app_commands.describe(user = "Действия направленные на это пользователя.")
     # @app_commands.guild_only()
@@ -263,11 +272,13 @@ class AdminCog(commands.Cog):
     # async def panel(self, interaction: discord.Interaction, user: discord.User):
     #     pass
 
+    # COMMAND: Остановка всех транзакций
     @app_commands.command(name="регулирование_валют", description="Прекратить циркуляцию валюты внутри сервера.")
     @app_commands.describe(action="Включить (True), Выключить (False).", reason="Причина регулировки валюты?")
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     async def regulator(self, interaction: discord.Interaction, reason: str, action: bool = BotConfig.TRANSACTIONS_AVAILABLE):
+        # METHOD: Подверждение действия и дальнейшее его продвижение
         async def confirm_action(confirm_interaction: discord.Interaction):
             action_text = ""
             action2_text = ""
@@ -300,6 +311,7 @@ class AdminCog(commands.Cog):
                 )
             await self.send_message(channel, l_msg)
 
+        # LOGIC: Отправка сообщения с подверждением/отменой
         view = ConfirmComponent(
             on_confirm=confirm_action
         )

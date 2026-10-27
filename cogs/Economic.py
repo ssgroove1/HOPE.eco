@@ -4,12 +4,103 @@ from pathlib import Path
 from datetime import datetime
 from discord.ext import commands
 
-# Импорт ваших собственных настроек и функций из корня проекта
 from config import BotConfig
 from database.db_logic import DB_Manager
 
-# Корень проекта (поднимаемся из папки cogs/ на один уровень вверх)
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# COMPANENT: Компанент подверждения действия
+class ConfirmComponent(discord.ui.LayoutView):
+    def __init__(
+        self,
+        on_confirm = None
+    ):
+        super().__init__(timeout=60)
+
+        self.message = None
+        self.on_confirm = on_confirm
+
+        # VARIABLE: Эмодзи для сообщений
+        ow_em = "<a:owner_emoji:1552781248236097546>"
+        at_em = "<a:attention_emoji:1552749665030508654>"
+
+        self.confirm_button = discord.ui.Button(
+            style=discord.ButtonStyle.success,
+            label="ᴨодʙᴇᴩждᴀᴇᴛᴇ ᴧи ʙы ᴄʙои дᴇйᴄᴛʙия?",
+            emoji=discord.PartialEmoji(
+                name="alright_emoji",
+                id=1552752070262521917,
+                animated=True
+            ),
+            custom_id="btn_action",
+        )
+
+        self.cancel_button = discord.ui.Button(
+            style=discord.ButtonStyle.danger,
+            label="оᴛʍᴇниᴛь ᴄʙои дᴇйᴄᴛʙия.",
+            emoji=discord.PartialEmoji(
+                name="denied_emoji",
+                id=1552780290609512658,
+                animated=True
+            ),
+            custom_id="btn_action_2",
+        )
+
+        # LOGIC: Callback кнопок
+        self.confirm_button.callback = self.confirm
+        self.cancel_button.callback = self.cancel
+
+        self.InfoContainer = discord.ui.Container(
+            discord.ui.TextDisplay(
+                content=(
+                    f"{at_em} ᴦоᴛоʙы ᴧи ʙы ʙзяᴛь оᴛʙᴇᴛᴄᴛʙᴇнноᴄᴛь зᴀ ϶ᴛо дᴇйᴄᴛʙиᴇ?\n"
+                    f"{at_em} обᴩᴀᴛиᴛь ϶ᴛо дᴇйᴄᴛʙиᴇ ужᴇ нᴇᴧьзя будᴇᴛ.\n"
+                    f"{at_em} будᴇᴛ оᴛᴋᴧонᴇно ᴨоᴄᴧᴇ 60 ᴄᴇᴋунд бᴇздᴇйᴄᴛʙия.\n"
+                    f"\n-# {ow_em} ʙ ᴄᴧучᴀᴇ зᴧоуᴨоᴛᴩᴇбᴧᴇния — нᴀᴋᴀзᴀниᴇ."
+                ),
+            ),
+        )
+
+        self.add_item(self.InfoContainer)
+
+        self.add_item(
+            discord.ui.ActionRow(
+                self.confirm_button,
+                self.cancel_button,
+            ),
+        )
+
+    # METHOD: Выключение/деактивация кнопок
+    async def disable_buttons(self):
+        self.confirm_button.disabled = True
+        self.cancel_button.disabled = True
+
+    # METHOD: Кнопка подверждения действия
+    async def confirm(self, interaction: discord.Interaction):
+        await self.disable_buttons()
+
+        await interaction.response.edit_message(view=self)
+
+        await self.on_confirm(interaction)
+
+        self.stop()
+
+    # METHOD: Кнопка отмены действия
+    async def cancel(self, interaction: discord.Interaction):
+        await self.disable_buttons()
+
+        await interaction.response.edit_message(view=self)
+
+        self.stop()
+
+    # METHOD: Выключение/деактивация кнопок за время (60 секунд)
+    async def on_timeout(self):
+        await self.disable_buttons()
+
+        if self.message:
+            await self.message.edit(
+                view=self
+            )
 
 # COMPANENT: Компанент простого текстового сообщения
 class DefaultComponent(discord.ui.LayoutView):
@@ -37,6 +128,7 @@ class EconomicCog(commands.Cog):
         self.ow_em = "<a:owner_emoji:1552781248236097546>"
         self.cl_em = "<a:cult_emoji:1553433613012566066>"
         self.st_em = "<:shiny_emoji:1558391640295604345>"
+        self.at_em = "<a:attention_emoji:1552749665030508654>"
 
         # LOGIC: Переменная для хранение данных рыб
         self.fish_info = {
@@ -98,18 +190,22 @@ class EconomicCog(commands.Cog):
         try:
             view = DefaultComponent(content)
 
-            if destination.response.is_done():
-                await destination.followup.send(
-                    view=view,
-                    ephemeral=is_ephemeral
-                )
-            else:
-                await destination.response.send_message(
-                    view=view,
-                    ephemeral=is_ephemeral
-                )
-            return
+            if isinstance(destination, discord.Interaction):
+                if destination.response.is_done():
+                    await destination.followup.send(
+                        view=view,
+                        ephemeral=is_ephemeral
+                    )
+                else:
+                    await destination.response.send_message(
+                        view=view,
+                        ephemeral=is_ephemeral
+                    )
+                return
 
+            await destination.send(
+                view=view
+            )
         except Exception as e:
             print(
                 f"❌ Не удалось отправить сообщение пользователю: "
@@ -149,6 +245,44 @@ class EconomicCog(commands.Cog):
             )
             return False
 
+        return True
+
+    # METHOD: Для проверки условий перевода валюты
+    async def pay_checks(self, interaction, user, points) -> bool:
+        if interaction.user.id == user.id:
+            msg = (
+                f"{self.dn_em} ʙы нᴇ ʍожᴇᴛᴇ ᴨᴇᴩᴇʙᴇᴄᴛи ʙᴀᴧюᴛу ᴄᴀʍоʍу ᴄᴇбᴇ!"
+                f"\n\n-# {self.ow_em} ᴄчиᴛᴀᴇᴛᴇ ϶ᴛо оɯибᴋой, ᴄообщиᴛᴇ ᴄоздᴀᴛᴇᴧю."
+            )
+            await self.send_message(interaction, msg, True)
+            return False
+        
+        if user.bot:
+            msg = (
+                f"{self.dn_em} ʙы нᴇ ʍожᴇᴛᴇ ᴨᴇᴩᴇʙодиᴛь ʙᴀᴧюᴛу боᴛᴀʍ!"
+                f"\n\n-# {self.ow_em} ᴄчиᴛᴀᴇᴛᴇ ϶ᴛо оɯибᴋой, ᴄообщиᴛᴇ ᴄоздᴀᴛᴇᴧю."
+            )
+            await self.send_message(interaction, msg, True)
+            return False
+        
+        if points <= 25:
+            msg = (
+                f"{self.dn_em} ᴄуʍʍᴀ ᴨᴇᴩᴇʙодᴀ доᴧжнᴀ быᴛь боᴧьɯᴇ 25 {self.vl_em}!"
+                "\n\n-# {self.ow_em} ᴄчиᴛᴀᴇᴛᴇ ϶ᴛо оɯибᴋой, ᴄообщиᴛᴇ ᴄоздᴀᴛᴇᴧю."
+            )
+            await self.send_message(interaction, msg, True)
+            return False
+
+        user_data = await self.manager.get_user_economic(interaction.user.id)
+        if user_data["points"] < points:
+            msg = (
+                f"{self.dn_em} нᴇдоᴄᴛᴀᴛочно ʙᴀᴧюᴛы дᴧя ᴨᴇᴩᴇʙодᴀ!"
+                f"\n{self.dn_em} нᴀ ʙᴀɯᴇʍ бᴀᴧᴀнᴄᴇ: {user_data['points']} {self.vl_em}."
+                f"\n\n-# {self.ow_em} ᴄчиᴛᴀᴇᴛᴇ ϶ᴛо оɯибᴋой, ᴄообщиᴛᴇ ᴄоздᴀᴛᴇᴧю."
+            )
+            await self.send_message(interaction, msg, True)
+            return False
+        
         return True
 
     # METHOD: Проверка кулдауна
@@ -203,6 +337,7 @@ class EconomicCog(commands.Cog):
 
         current_points = await self.manager.get_user_points(user_id)
 
+        # LOGIC: Если ф-ция с рыбалкой
         if fish_com:
             fish_data = self.fish_info[rarity_type][fish_name]
             
@@ -226,9 +361,11 @@ class EconomicCog(commands.Cog):
             f"\n\n-# {self.cl_em} ᴋуᴧьᴛ ᴦоᴩдиᴛᴄя ʙᴀʍи, нᴇ оᴄᴛᴀʙᴧяйᴛᴇ ᴇᴦо, ᴀ он — ʙᴀᴄ."
         )
 
+    # COMMAND: Команда "культ" для получения валюты
     @app_commands.command(name="культ", description="Поддержать культ (забрать ежедневный доход).")
     @app_commands.guild_only()
     async def claim(self, interaction: discord.Interaction):
+        # LOGIC: Проверки условий перед использованием
         if not await self.command_checks(interaction):
             return
 
@@ -242,9 +379,11 @@ class EconomicCog(commands.Cog):
 
         await self.get_work(interaction, "last_claim", reward)
 
+    # COMMAND: Команда "рыбалка" для получения валюты
     @app_commands.command(name="рыбалка", description="Порыбачить ради прибыли.")
     @app_commands.guild_only()
     async def fish(self, interaction: discord.Interaction):
+        # LOGIC: Проверки условий перед использованием
         if not await self.command_checks(interaction):
             return
 
@@ -258,9 +397,11 @@ class EconomicCog(commands.Cog):
 
         await self.get_work(interaction, "last_fish", reward, True, rarity_type, fish_name)
 
+    # COMMAND: Команда "бонус" для получения валюты
     @app_commands.command(name="бонус", description="Забрать дополнительную награду.")
     @app_commands.guild_only()
     async def bonus(self, interaction: discord.Interaction):
+        # LOGIC: Проверки условий перед использованием
         if not await self.command_checks(interaction):
             return
 
@@ -274,135 +415,73 @@ class EconomicCog(commands.Cog):
 
         await self.get_work(interaction, "last_bonus", reward)
 
-    # @app_commands.command(name="казино", description="Дэпнуть...")
-    # @app_commands.describe(bet="Сумма ставки.")
-    # @app_commands.guild_only()
-    # async def casino(self, interaction: discord.Interaction, bet: int):
-    #     if interaction.channel.id != COMMANDS_CHANNEL and interaction.channel.id != MOD_COMMANDS_CHANNEL:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Эта команда работает только в канале <#{COMMANDS_CHANNEL}>!", ephemeral=True)
-    #         return
-    #     if bet < 10:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Минимальная ставка: `10` <:physpoints:1515371982571704361>!", ephemeral=True)
-    #         return
-    #     if bet > 100:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Максимальная ставка: `100` <:physpoints:1515371982571704361>!", ephemeral=True)
-    #         return
-    #     user_data = await manager.get_user_economic(interaction.user.id)
-    #     if user_data["points"] < bet:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Недостаточно монет! У вас: `{user_data['points']}` <:physpoints:1515371982571704361>", ephemeral=True)
-    #         return
-    #     symbols = ["<a:cherryemoji:1518682902827896973>", "<a:lemonemoji:1518683734411444224>", "<a:orangeemoji:1518685108578680863>", "<a:grapesemoji:1518685654907621546>", "<a:littlediamondemoji:1518554727023902730>", "<a:staremoji:1518554397750202460>", "<a:hakariemoji:1518552999214055424>"]
+    # COMMAND: Команда "заплатить" для передачи пользователю валюты
+    @app_commands.command(name="заплатить", description="Передать пользователю валюту.")
+    @app_commands.describe(user="Пользователь.", points="Кол-во валюты.")
+    @app_commands.guild_only()
+    async def pay(self, interaction: discord.Interaction, user: discord.User, points: int):
+        # LOGIC: Проверки условий перед использованием
+        if not await self.command_checks(interaction):
+            return
+        if not await self.pay_checks(interaction, user, points):
+            return
         
-    #     slot1 = random.choice(symbols)
-    #     slot2 = random.choice(symbols)
-    #     slot3 = random.choice(symbols)
+        # METHOD: Подверждение действия и дальнейшее его продвижение
+        async def confirm_action(confirm_interaction: discord.Interaction):
+            
+            # LOGIC: Выдача валюты пользователю и устранение валюты от переданного игрока
+            try:
+                user_points = int(-points)
+                await self.manager.add_points(confirm_interaction.user.id, user_points)
+    
+                target_points = int(points)
+                await self.manager.add_points(user.id, target_points)
+            
+            # LOGIC: Неудачный перевод
+            except Exception as e:
+                await self.send_message(confirm_interaction, 
+                    (
+                        f"{self.dn_em} ᴨᴩоизоɯᴧᴀ оɯибᴋᴀ ᴨᴩи ᴨᴇᴩᴇʙодᴇ:\n"
+                        f"```{str(e)}```\n\n"
+                        f"-# {self.ow_em} ᴨᴩобᴧᴇʍᴀ ᴄ ᴨᴇᴩᴇʙодоʍ, ᴄообщиᴛᴇ ᴄоздᴀᴛᴇᴧю."
+                    )
+                , True)
+                return
 
-    #     win = False
-    #     multiplier = 0
-    #     text = ""
-    #     winning_combos = {
-    #         "<a:hakariemoji:1518552999214055424>": (5, "**джᴇᴋᴨоᴛ! ᴨоᴧучᴀᴇᴛ ᴄиᴧу хᴀᴋᴀᴩи!**"),
-    #         "<a:littlediamondemoji:1518554727023902730>": (3.5, "**ᴀᴧʍᴀзнᴀя ᴧихоᴩᴀдᴋᴀ!**"),
-    #         "<a:staremoji:1518554397750202460>": (2.75, "**ᴄᴇᴦодняɯний зʙᴇздоᴨᴀд!**"),
-    #         "<a:cherryemoji:1518682902827896973>": (2.25, "**иᴄᴨоᴧьзуᴇᴛ оᴦнᴇʙую ʍощь ʙиɯни из ᴘᴠᴢ!**"),
-    #         "<a:lemonemoji:1518683734411444224>": (2, "**ᴧиʍонᴀдноᴇ нᴀᴄᴧᴀждᴇньᴇ!**"),
-    #         "<a:orangeemoji:1518685108578680863>": (2, "**ᴀᴨᴇᴧьᴄинᴋи!**"),
-    #         "<a:grapesemoji:1518685654907621546>": (2.25, "**ᴧучɯᴇᴇ ʙино!**")
-    #     }
+            # LOGIC: Получаем новую информацию для отображения и канал логов
+            target_data = await self.manager.get_user_economic(user.id)
+            channel = self.bot.get_channel(BotConfig.LOG_CHANNEL)
+            
+            # LOGIC: Отправка сообщения пользователю
+            msg = (
+                f"{self.gr_em} ᴨоᴧьзоʙᴀᴛᴇᴧь, {confirm_interaction.user.mention}, ᴨᴇᴩᴇʙᴇᴧ ʙᴀᴧюᴛу {user.mention}.\n"
+                f"{self.gr_em} ᴩᴀзʍᴇᴩ ᴨᴇᴩᴇʙᴇдённой ᴄуʍʍы: `{points}` {self.vl_em}\n"
+                f"{self.gr_em} новый баланс {user.mention}: `{target_data['points']}` {self.vl_em}"
+                f"\n\n-# {self.cl_em} ᴋуᴧьᴛ ᴦоᴩдиᴛᴄя ʙᴀʍи, нᴇ оᴄᴛᴀʙᴧяйᴛᴇ ᴇᴦо, ᴀ он — ʙᴀᴄ."
+            )
+            await self.send_message(confirm_interaction, msg, False)
 
-    #     if slot1 == slot2 == slot3 and slot1 in winning_combos:
-    #         multiplier, text = winning_combos[slot1]
-    #         win = True
-    #     elif slot1 == slot2 or slot2 == slot3 or slot1 == slot3:
-    #         multiplier = 1.15
-    #         win = True
-    #         text = "**<:accessemoji:1518684370410541158> дʙᴇ одинᴀᴋоʙых!**"
-    #     else:
-    #         text = "<:accessdeniedemoji:1517986918573408318> **ничᴇᴦо нᴇ ʙыᴨᴀᴧо...**"
-    #     if win:
-    #         winnings = int(bet * multiplier)
-    #         await manager.update_user_economic(interaction.user.id, int(user_data["points"]+winnings), user_data["trees"], user_data["bugs"], user_data["animals"], user_data["werewolfs"], user_data["last_claim"], user_data["last_water"], user_data["last_collect"], user_data["last_fish"], user_data["last_bonus"], user_data["last_rob"])
-    #         embed = discord.Embed(
-    #             title="🎰 ᴍᴀᴄʜɪɴᴇ's sʟᴏᴛs",
-    #             description=f"{slot1} {slot2} {slot3}\n\n"
-    #                         f"{text}\n"
-    #                         f"<:moneybagemoji:1518230296078843964> ʙыиᴦᴩыɯ: `{winnings}` <:physpoints:1515371982571704361> (x{multiplier})",
-    #             color=discord.Color.green()
-    #         )
-    #     else:
-    #         await manager.update_user_economic(interaction.user.id, int(user_data["points"]-bet), user_data["trees"], user_data["bugs"], user_data["animals"], user_data["werewolfs"], user_data["last_claim"], user_data["last_water"], user_data["last_collect"], user_data["last_fish"], user_data["last_bonus"], user_data["last_rob"])
-    #         embed = discord.Embed(
-    #             title="🎰 ᴍᴀᴄʜɪɴᴇ's sʟᴏᴛs",
-    #             description=f"{slot1} {slot2} {slot3}\n\n"
-    #                         f"{text}\n"
-    #                         f"<:accessdeniedemoji:1517986918573408318> ᴨоᴛᴇᴩяно: `{bet}` <:physpoints:1515371982571704361>",
-    #             color=discord.Color.red()
-    #         )
-    #     new_balance = user_data["points"] + (winnings if win else -bet)
-    #     embed.add_field(
-    #         name="<:moneybagemoji:1518230296078843964> ʙᴀɯ бᴀᴧᴀнᴄ",
-    #         value=f"`{new_balance}` <:physpoints:1515371982571704361>",
-    #         inline=False
-    #     )
-    #     embed.set_footer(text="удᴀчᴀ доᴄᴛиᴦнᴇᴛ ʙᴀᴄ! 🍀")
-        
-    #     await safe_send(interaction, embed=embed)
+            # LOGIC: Фиксируем в логах
+            l_msg = (
+                f"### {self.cl_em} ᴨᴇᴩᴇʙод ʙᴀᴧюᴛы.\n"
+                f"{self.at_em} ᴨоᴧьзоʙᴀᴛᴇᴧь {interaction.user.mention} ᴨᴇᴩᴇʙёᴧ иᴦᴩоᴋу {user.mention} ʙᴀᴧюᴛу\n"
+                f"{self.at_em} ᴩᴀзʍᴇᴩ ᴨᴇᴩᴇʙᴇдᴇнной ʙᴀᴧюᴛы: {points} {self.vl_em}\n\n"
+                f"{self.at_em} новый баланс {user.mention}: {target_data['points']} {self.vl_em}"
+                f"\n\n-# {self.ow_em} ʙ ᴄᴧучᴀᴇ нᴇзᴀᴋонноᴄᴛи — ʙы ʙ ᴨᴩᴀʙᴇ нᴀᴋᴀзᴀᴛь ᴇᴦо."
+            )
+            await self.send_message(channel, l_msg)
 
-    # @app_commands.command(name="заплатить", description="Передать пользователю монет.")
-    # @app_commands.describe(user="Пользователь.", points="Кол-во монет.")
-    # @app_commands.guild_only()
-    # async def pay(self, interaction: discord.Interaction, user: discord.User, points: int):
-    #     if interaction.channel.id != COMMANDS_CHANNEL and interaction.channel.id != MOD_COMMANDS_CHANNEL:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Эта команда работает только в канале <#{COMMANDS_CHANNEL}>!", ephemeral=True)
-    #         return
-    #     if interaction.user.id == user.id:
-    #         await safe_send(interaction, "<:accessdeniedemoji:1517986918573408318> Вы не можете перевести монеты самому себе!", ephemeral=True)
-    #         return
-    #     if user.bot:
-    #         await safe_send(interaction, "<:accessdeniedemoji:1517986918573408318> Вы не можете переводить монеты ботам!", ephemeral=True)
-    #         return
-    #     if points <= 0:
-    #         await safe_send(interaction, "<:accessdeniedemoji:1517986918573408318> Сумма должна быть больше 0!", ephemeral=True)
-    #         return
-    #     MIN_PAY = 5
-    #     if points < MIN_PAY:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Минимальная сумма для перевода - {MIN_PAY} монет!", ephemeral=True)
-    #         return
-    #     MAX_PAY = 10000
-    #     if points > MAX_PAY:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Максимальная сумма для перевода - {MAX_PAY} монет!", ephemeral=True)
-    #         return
-    #     user_data = await manager.get_user_economic(interaction.user.id)
-    #     target_data = await manager.get_user_economic(user.id)
-    #     if user_data["points"] < points:
-    #         await safe_send(interaction, f"<:accessdeniedemoji:1517986918573408318> Недостаточно монет! У вас: {user_data['points']} монет.", ephemeral=True)
-    #         return
-    #     try:
-    #         await manager.update_user_economic(interaction.user.id, int(user_data["points"]-points), user_data["trees"], user_data["bugs"], user_data["animals"], user_data["werewolfs"], user_data["last_claim"], user_data["last_water"], user_data["last_collect"], user_data["last_fish"], user_data["last_bonus"], user_data["last_rob"])
-    #         await manager.update_user_economic(user.id, int(target_data["points"]+points), target_data["trees"], target_data["bugs"], target_data["animals"], target_data["werewolfs"], target_data["last_claim"], target_data["last_water"], target_data["last_collect"], target_data["last_fish"], target_data["last_bonus"], target_data["last_rob"])
-    #     except Exception as e:
-    #         await safe_send(interaction, f"❌ Произошла ошибка при переводе: {str(e)}", ephemeral=True)
-    #         return
-    #     embed = discord.Embed(
-    #         title="<:moneybagemoji:1518230296078843964> уᴄᴨᴇɯный ᴨᴇᴩᴇʙод!",
-    #         color=discord.Color.darker_grey()
-    #     )
-    #     embed.add_field(
-    #         name="оᴛᴨᴩᴀʙиᴛᴇᴧь",
-    #         value=f"<@{interaction.user.id}>",
-    #         inline=True
-    #     )
-    #     embed.add_field(
-    #         name="ᴨоᴧучᴀᴛᴇᴧь",
-    #         value=f"<@{user.id}>",
-    #         inline=True
-    #     )
-    #     embed.add_field(
-    #         name="ᴨоᴧучиᴧ",
-    #         value=f"**{points}** <:physpoints:1515371982571704361>",
-    #         inline=True
-    #     )
-    #     await safe_send(interaction, embed=embed)
+        # LOGIC: Отправка сообщения с подверждением/отменой
+        view = ConfirmComponent(
+            on_confirm=confirm_action
+        )
+
+        await interaction.response.send_message(
+            view=view,
+            ephemeral=True
+        )
+
+        view.message = await interaction.original_response()
 
     # @app_commands.command(name="ограбить", description="Ограбить другого игрока.")
     # @app_commands.describe(user="Кого хотите ограбить?")

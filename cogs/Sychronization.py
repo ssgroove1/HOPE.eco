@@ -74,12 +74,12 @@ class SychronizationCog(commands.Cog):
                 ephemeral=True
             )
 
-            # Очищаем команды текущего сервера
+            # LOGIC: Очищаем команды текущего сервера
             self.bot.tree.clear_commands(
                 guild=guild
             )
 
-            # Синхронизируем пустое дерево с Discord
+            # LOGIC: Сохраняем/синхронизируем действия
             synced = await self.bot.tree.sync(
                 guild=guild
             )
@@ -131,11 +131,10 @@ class SychronizationCog(commands.Cog):
         try:
             await interaction.response.defer(ephemeral=True)
 
-            # Берём глобальные команды и копируем их
-            # в дерево этого сервера.
+            # LOGIC: Берем глобальные команды в дерево команд сервера
             self.bot.tree.copy_global_to(guild=guild)
 
-            # Публикуем команды на сервере.
+            # LOGIC: Сохраняем/синхронизируем действия
             synced = await self.bot.tree.sync(guild=guild)
 
             sub_title = f"-# {self.ow_em} уᴄᴨᴇɯнᴀя ᴩᴇᴦиᴄᴛᴩᴀция ᴄоздᴀᴛᴇᴧя."

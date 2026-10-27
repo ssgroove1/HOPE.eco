@@ -18,7 +18,6 @@ class DefaultComponent(discord.ui.LayoutView):
 
 # LOGIC: Основной функционал обработки ошибок
 class Errors(commands.Cog):
-
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -27,7 +26,7 @@ class Errors(commands.Cog):
         self.wt_em = "<a:wait_emoji:1552785236549443634>"
         self.ow_em = "<a:owner_emoji:1552781248236097546>"
 
-        # Глобальный обработчик ошибок slash-команд
+        # LOGIC: Глобальный обработчик ошибок slash-команд
         self.bot.tree.on_error = self.on_app_command_error
 
     # METHOD: Форматирование списка элементов

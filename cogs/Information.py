@@ -3,11 +3,9 @@ from discord import app_commands
 from pathlib import Path
 from discord.ext import commands
 
-# Импорт ваших собственных настроек и функций из корня проекта
 from config import BotConfig
 from database.db_logic import DB_Manager
 
-# Корень проекта (поднимаемся из папки cogs/ на один уровень вверх)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # COMPANENT: Компанент лидерборда
